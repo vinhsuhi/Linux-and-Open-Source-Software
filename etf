@@ -1,0 +1,142 @@
+#!/bin/sh
+
+#@authors: Vinh Tong MSSV: 2015-4381, 
+#	   Quang Huy MSSV: 2015-
+#	   KSTN-CNTT-k60
+
+
+#input: extractt filename
+#output:
+#Emails: 
+#1. email1
+#2. email2
+#3. email3
+#4. email4
+#phone numbers:
+#order  phone numbers     manufacturer 
+#1. 	number1		  Viettel
+#2. 	number2		  Unknown
+#
+#web address 
+#1.
+#2. 
+
+######Step1: looking for emails
+
+#raw-idea: st1: find lines have @ in that line by grep
+#	   st2: change double spaces into single space
+#	   st3: devide each line into fields by cutting with single space
+#	   st4: 
+
+#list all words contains '@'
+i=`grep @ $1 | tr -s " " | wc -w`
+for j in `seq 1 $i`; do	
+	grep @ $1 | sed 's/$/ ./' | tr -s " " | cut -d' ' -f$j | grep @
+done > /home/suhi/Documents/email
+echo -e "\t\t   EMAIL LIST"
+echo "================================================="
+
+# check if email is valid
+input="/home/suhi/Documents/email"
+# read each line
+while IFS='' read -r line || [[ -n $line ]]; do
+	if [[ "$line" == [a-zA-Z0-9]* && "$line" == *[a-zA-Z] ]]; then
+		a=`echo "$line" | sed 's/[^@]//g' | awk '{print length}'`
+		if [ "$a" == "1" ]; then
+			#check the first part of email and the second part of email
+			first=`echo "$line" | cut -d'@' -f1`
+			second=`echo "$line" | cut -d'@' -f2`
+			if [[ $first =~ ^[a-zA-Z0-9_-]+$ && $second =~ ^[a-zA-Z.]+$ && $second != .* && $second != *..* && $second == *.* ]]; then
+				echo "$line"
+				echo "-------------------------------------------------"
+			fi
+		fi
+	fi
+done < $input
+
+######Step2: looking for phone number
+
+# raw-idea: looking for words that only contain number or have form like +39384914
+# hard situations: 
+# h1:phone number in form like 0165 409 5052 ==> there are ' ' between each 
+# part of number
+# h2:phone number in form like (84)(8)866-2924 ==> how to deal with () and - ?
+# h3:phone number in form like 0165.409.5052
+# h3:how to ensure that it isn't a express?
+
+
+# NOW I JUST SPPORT FOR MOBILE NUMBER IN FORM OF ENTERPRISES AS FOLLOW:
+# VIETTEL 098, 097, 096, 0169, 0168, 0167, 0166, 0165, 0164, 0163, 0162
+# MOBIFONE 090, 093, 010, 0121, 0122, 0126, 0128
+# VINAPHONE 091, 094, 0123, 0124, 0125, 0127, 0129
+# VIETNAMOBIE 092, 0188
+# GFONE (Beeline): 0993, 0994, 0995, 0996, 099
+# SPHONE 095
+# i is the total number of words over all line contains number
+i=`grep [0-9] $1 | tr -s " " | wc -w`
+
+# each word contains number lain in oneline in file "number1"
+for j in `seq 1 $i`; do
+	grep [0-9] $1 | sed 's/$/ ./' | tr -s " " | cut -d' ' -f$j | grep [0-9]
+done > /home/suhi/Documents/number
+
+# read each line in number 1
+echo -e "\n\t\t   PHONE LIST"
+echo "+-----------------------------------------------+"
+echo -e "| Phone Number\t|\tMobile Network Operator |"
+echo "+---------------+-------------------------------+"
+input="/home/suhi/Documents/number"
+while IFS='' read -r line || [[ -n $line ]]; do
+	# check if there are only number in word
+	if [[ "$line" =~ ^[0-9.]+$ ]]; then
+		count=`echo "$line" | wc -c`
+		# if number in form just has number
+		if [[ "$line" =~ ^[0-9]+$ ]]; then
+			# echo "$line"
+			# check length of number
+			if [[ "$count" == "11" || "$count" == "12" ]]; then
+				# echo "$line"
+				if [[ "$line" == 09* || "$line" ==  016* || "$line" == 012* || "$line" == 0188* || "$line" == 010* ]]; then
+					if [[ "$line" == 098* || "$line" == 097* || "$line" == 096* || "$line" == 0169* || "$line" == 0168* || "$line" == 0167* || "$line" == 0166* || "$line" == 0165* || "$line" == 0164* || "$line" == 0163* || "$line" == 0162* ]]; then
+						echo -e "| $line\t|\tViettel\t\t\t|"
+					elif [[ "$line" == 090* || "$line" == 093* || "$line" == 010* || "$line" == 0121* || "$line" == 0122* || "$line" == 0126* || "$line" == 0128* ]]; then
+						echo -e "| $line\t|\tMobifone\t\t|"
+					elif [[ "$line" == 091* || "$line" == 094* || "$line" == 0123* || "$line" == 0124* || "$line" == 0125* || "$line" == 0127* || "$line" == 0129* ]]; then
+						echo -e "| $line\t|\tVinaphone\t\t|"
+					elif [[ "$line" == 092* || "$line" == 0188* ]]; then
+						echo -e "| $line\t|\tVietnamobie\t\t|"
+					elif [[ "$line" == 0993* || "$line" == 0994* || "$line" == 0995* || "$line" == 0996* || "$line" == 0999* ]]; then
+						echo -e "| $line\t|\tBeeline\t\t\t|"
+					elif [[ "$line" == 095* ]]; then
+						echo -e "| $line\t|\tSphone\t\t\t|"
+					fi
+				fi
+			fi
+		# if number in form has number and dot
+		elif [[ "$count" == "13" || "$count" == "14" ]]; then
+			
+			depoint=`echo "${line//.}"`
+			count=`echo "$depoint" | wc -c`
+			# eliminate all '.' then check if the number of number is valid
+			if [[ "$count" == "11" || "$count" == "12" ]]; then
+				if [[ "$line" == *.*.* && "$line" != .* && "$line" != *. && "$line" != *..* ]]; then
+					if [[ "$line" == 098* || "$line" == 097* || "$line" == 096* || "$line" == 0169* || "$line" == 0168* || "$line" == 0167* || "$line" == 0166* || "$line" == 0165* || "$line" == 0164* || "$line" == 0163* || "$line" == 0162* ]]; then
+						echo -e "| $line\t|\tViettel\t\t\t|"
+					elif [[ "$line" == 090* || "$line" == 093* || "$line" == 010* || "$line" == 0121* || "$line" == 0122* || "$line" == 0126* || "$line" == 0128* ]]; then
+						echo -e "| $line\t|\tMobifone\t\t|"
+					elif [[ "$line" == 091* || "$line" == 094* || "$line" == 0123* || "$line" == 0124* || "$line" == 0125* || "$line" == 0127* || "$line" == 0129* ]]; then
+						echo -e "| $line\t|\tVinaphone\t\t|"
+					elif [[ "$line" == 092* || "$line" == 0188* ]]; then
+						echo -e "| $line\t|\tVietnamobie\t\t|"
+					elif [[ "$line" == 0993* || "$line" == 0994* || "$line" == 0995* || "$line" == 0996* || "$line" == 0999* ]]; then
+						echo -e "| $line\t|\tBeeline\t\t|"
+					elif [[ "$line" == 095* ]]; then
+						echo -e "| $line\t|\tSphone\t\t|"
+					fi
+				fi
+			fi
+		fi
+	fi
+done < $input
+echo "+---------------+-------------------------------+"
+
